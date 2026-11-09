@@ -1,0 +1,749 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light}body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+<title>Coffee Passport</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a passport cover band with the running totals, then the log on the left (country stamps, filters, entries) and a sticky entry form on the right. */
+:root {
+  --ground: #eceee9;
+  --surface: #f8f9f6;
+  --ink: #16262a;
+  --ink-2: #4b5b5e;
+  --line: #cfd5cf;
+  --accent: #0f6a5b;
+  --accent-ink: #ffffff;
+  --cup: #c27a14;
+  --danger: #a8321f;
+  --cover: #0d3b36;
+  --cover-ink: #e9f3ef;
+  --cover-ink-2: #9fc2b9;
+  --f-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #0f1a1c;
+    --surface: #172529;
+    --ink: #e8efec;
+    --ink-2: #9db0ad;
+    --line: #2b3e41;
+    --accent: #46c2aa;
+    --accent-ink: #07201b;
+    --cup: #e0a64a;
+    --danger: #f08b79;
+    --cover: #0a2926;
+    --cover-ink: #e4f0ec;
+    --cover-ink-2: #86b0a6;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --ground: #0f1a1c;
+  --surface: #172529;
+  --ink: #e8efec;
+  --ink-2: #9db0ad;
+  --line: #2b3e41;
+  --accent: #46c2aa;
+  --accent-ink: #07201b;
+  --cup: #e0a64a;
+  --danger: #f08b79;
+  --cover: #0a2926;
+  --cover-ink: #e4f0ec;
+  --cover-ink-2: #86b0a6;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--ground); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.5; }
+.wrap {
+  max-width: 1180px;
+  margin-inline: auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+h1, h2, h3 { font-family: var(--f-display); margin: 0; text-wrap: balance; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Cover */
+.cover { background: var(--cover); color: var(--cover-ink); position: relative; overflow: hidden; border-bottom: 1px solid var(--line); }
+.cover .wrap { padding-block: 36px 28px; position: relative; }
+.cover-cup { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 220px; height: 220px; color: var(--cover-ink); opacity: 0.09; pointer-events: none; }
+.auth { display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 10px; min-height: 30px; margin-bottom: 8px; }
+.auth .who { font-family: var(--f-mono); font-size: 12px; color: var(--cover-ink-2); overflow-wrap: anywhere; }
+.eyebrow { font-family: var(--f-mono); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--cover-ink-2); margin: 0 0 10px; }
+.cover h1 { font-size: clamp(2.4rem, 7vw, 4.2rem); line-height: 1; font-weight: 700; letter-spacing: -0.02em; }
+.cover .lede { margin: 12px 0 0; color: var(--cover-ink-2); max-width: 46ch; }
+.stats { display: flex; flex-wrap: wrap; gap: 14px 36px; margin: 26px 0 0; padding: 0; }
+.stats div { min-width: 0; }
+.stats dt { font-family: var(--f-mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--cover-ink-2); }
+.stats dd { margin: 2px 0 0; font-family: var(--f-display); font-size: 1.9rem; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+
+/* Layout */
+.layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; padding-block: 28px 56px; }
+@media (min-width: 960px) {
+  .layout { grid-template-columns: minmax(0, 1fr) 360px; align-items: start; }
+}
+.log { min-width: 0; display: flex; flex-direction: column; gap: 24px; }
+.section-label { font-family: var(--f-mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-2); margin: 0 0 12px; }
+
+/* Stamps */
+.stamps { display: flex; flex-wrap: wrap; gap: 20px 22px; padding: 4px 4px 8px; }
+.stamp {
+  display: inline-flex; flex-direction: column; align-items: center; gap: 2px;
+  border: 2px solid var(--accent); outline: 1px solid var(--accent); outline-offset: 3px;
+  color: var(--accent); border-radius: 6px; padding: 7px 14px;
+  font-family: var(--f-mono); text-transform: uppercase; letter-spacing: 0.08em; font-size: 12px; font-weight: 500;
+  transform: rotate(var(--r, 0deg)); max-width: 100%; text-align: center; overflow-wrap: anywhere;
+}
+.stamp small { font-size: 10px; opacity: 0.8; letter-spacing: 0.1em; }
+.stamps-empty { margin: 0; color: var(--ink-2); font-size: 14px; }
+
+/* Toolbar */
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.search { flex: 1 1 200px; min-width: 0; }
+.field-input, .search, select, textarea {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; width: 100%; min-width: 0;
+}
+textarea { resize: vertical; min-height: 84px; }
+.toolbar select { width: auto; flex: 0 1 auto; max-width: 100%; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--surface); max-width: 100%; flex-wrap: wrap; }
+.seg button { border: 0; background: transparent; padding: 8px 12px; cursor: pointer; color: var(--ink-2); font-size: 14px; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 9px 14px; cursor: pointer; font-weight: 500; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.primary:hover { filter: brightness(1.06); }
+.btn[disabled] { opacity: 0.6; cursor: default; }
+.btn.small { padding: 5px 10px; font-size: 13px; }
+.btn.danger { color: var(--danger); }
+.only-narrow { display: inline-block; }
+@media (min-width: 960px) { .only-narrow { display: none; } }
+
+/* Entries */
+.list { display: flex; flex-direction: column; gap: 12px; }
+.entry { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+.entry.is-want { border-style: dashed; }
+.when { font-family: var(--f-mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-2); display: flex; flex-direction: column; align-items: flex-start; font-size: 11px; line-height: 1.25; }
+.when .d { font-family: var(--f-display); font-size: 2rem; font-weight: 700; color: var(--ink); line-height: 1; letter-spacing: 0; }
+.tag { display: inline-block; border: 1px dashed var(--ink-2); border-radius: 999px; padding: 3px 8px; font-size: 10px; }
+.entry .body { min-width: 0; }
+.entry h3 { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.loc { margin: 2px 0 0; font-family: var(--f-mono); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); overflow-wrap: anywhere; }
+.drink { margin: 10px 0 0; overflow-wrap: anywhere; }
+.drink .k { font-family: var(--f-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-2); margin-right: 6px; }
+.cups { display: flex; gap: 3px; margin: 8px 0 0; color: var(--cup); }
+.cups svg { width: 20px; height: 20px; display: block; }
+.notes { margin: 8px 0 0; color: var(--ink-2); white-space: pre-wrap; overflow-wrap: anywhere; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; }
+.ask { font-size: 14px; color: var(--danger); margin-right: 4px; }
+@media (max-width: 520px) {
+  .entry { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .when { flex-direction: row; align-items: baseline; gap: 8px; }
+  .when .d { font-size: 1.4rem; }
+}
+.empty { border: 1.5px dashed var(--line); border-radius: 12px; padding: 28px 22px; text-align: left; }
+.empty h2 { font-size: 1.4rem; margin-bottom: 6px; }
+.empty p { margin: 0 0 16px; color: var(--ink-2); max-width: 52ch; }
+.note { margin: 0; font-size: 13px; color: var(--ink-2); }
+.slow { color: var(--danger); }
+
+/* Composer */
+.composer { display: none; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 20px; min-width: 0; }
+.composer.open { display: block; order: -1; }
+@media (min-width: 960px) {
+  .composer, .composer.open { display: block; order: 0; position: sticky; top: calc(16px + env(safe-area-inset-top, 0px)); }
+}
+.composer h2 { font-size: 1.35rem; margin-bottom: 14px; }
+.form { display: flex; flex-direction: column; gap: 14px; }
+.row { display: flex; flex-wrap: wrap; gap: 12px; }
+.row > * { flex: 1 1 140px; min-width: 0; }
+.field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.field > label, .field > .lbl { font-family: var(--f-mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-2); }
+.field .req { color: var(--accent); }
+.rate { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.cup-btn { border: 0; background: transparent; padding: 2px; cursor: pointer; color: var(--cup); line-height: 0; border-radius: 6px; }
+.cup-btn svg { width: 28px; height: 28px; }
+.rate-read { font-family: var(--f-mono); font-size: 12px; color: var(--ink-2); margin-left: 6px; }
+.form-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.msg { min-height: 1.4em; margin: 0; font-size: 13px; color: var(--ink-2); }
+.msg.err { color: var(--danger); }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; } }
+</style>
+
+</head>
+<body>
+<header class="cover">
+  <svg class="cover-cup" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M3 9h14v4.5a5.5 5.5 0 0 1-5.5 5.5h-3A5.5 5.5 0 0 1 3 13.5V9z"/>
+    <path d="M17 10.5h1.2a2.8 2.8 0 0 1 0 5.6H16.4"/>
+    <path d="M7 3.5c-.8 1 .8 1.6 0 2.8M11 3.5c-.8 1 .8 1.6 0 2.8M15 3.5c-.8 1 .8 1.6 0 2.8"/>
+  </svg>
+  <div class="wrap">
+    <div class="auth" id="auth"></div>
+    <p class="eyebrow">Bucket list · every café in the world</p>
+    <h1>Coffee Passport</h1>
+    <p class="lede">Log each café you visit, what you drank and how it was, so the next trip starts from what you already know.</p>
+    <dl class="stats" id="stats" aria-label="Totals"></dl>
+  </div>
+</header>
+
+<main class="wrap layout">
+  <section class="log" aria-label="Your café log">
+    <div>
+      <h2 class="section-label">Stamps collected</h2>
+      <div class="stamps" id="stamps"></div>
+    </div>
+
+    <div>
+      <h2 class="section-label">Café log</h2>
+      <div class="toolbar">
+        <button type="button" class="btn primary only-narrow" id="open-form">Add a café</button>
+        <input class="search" id="q" type="search" placeholder="Search cafés, cities, drinks" aria-label="Search the log" autocomplete="off">
+        <div class="seg" role="group" aria-label="Show" id="status-seg">
+          <button type="button" data-status="all" aria-pressed="true">All</button>
+          <button type="button" data-status="tried" aria-pressed="false">Tried</button>
+          <button type="button" data-status="want" aria-pressed="false">Want to try</button>
+        </div>
+        <select id="country-filter" aria-label="Filter by country"><option value="">All countries</option></select>
+        <select id="sort" aria-label="Sort entries">
+          <option value="newest">Newest first</option>
+          <option value="rating">Highest rated</option>
+          <option value="country">Country A to Z</option>
+          <option value="name">Café A to Z</option>
+        </select>
+        <button type="button" class="btn" id="export" hidden>Export CSV</button>
+      </div>
+    </div>
+
+    <div class="list" id="list" aria-live="polite"></div>
+    <p class="note" id="storage-note"></p>
+  </section>
+
+  <aside class="composer" id="composer" aria-label="Add or edit a café">
+    <h2 id="form-title">Add a café</h2>
+    <form class="form" id="form" autocomplete="off" novalidate>
+      <div class="field">
+        <span class="lbl" id="status-lbl">Status</span>
+        <div class="seg" role="radiogroup" aria-labelledby="status-lbl" id="f-status">
+          <button type="button" role="radio" data-v="tried" aria-checked="true">Tried it</button>
+          <button type="button" role="radio" data-v="want" aria-checked="false">Want to try</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="f-name">Café name <span class="req">*</span></label>
+        <input class="field-input" id="f-name" type="text" placeholder="e.g. Café Central" maxlength="120">
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="f-city">City</label>
+          <input class="field-input" id="f-city" type="text" maxlength="80">
+        </div>
+        <div class="field">
+          <label for="f-country">Country <span class="req">*</span></label>
+          <input class="field-input" id="f-country" type="text" list="country-list" maxlength="80">
+          <datalist id="country-list"></datalist>
+        </div>
+      </div>
+      <div class="field" id="g-date">
+        <label for="f-date">Date visited</label>
+        <input class="field-input" id="f-date" type="date">
+      </div>
+      <div class="field">
+        <label for="f-drink">What I had</label>
+        <input class="field-input" id="f-drink" type="text" placeholder="e.g. Cortado, cardamom latte" maxlength="200">
+      </div>
+      <div class="field" id="g-rating">
+        <span class="lbl" id="rating-lbl">Rating</span>
+        <div class="rate" role="radiogroup" aria-labelledby="rating-lbl" id="f-rating"></div>
+      </div>
+      <div class="field">
+        <label for="f-notes">Notes</label>
+        <textarea id="f-notes" maxlength="1500" placeholder="Taste, atmosphere, price, what to order next time"></textarea>
+      </div>
+      <p class="msg" id="msg" role="status"></p>
+      <div class="form-actions">
+        <button type="submit" class="btn primary" id="save">Save café</button>
+        <button type="button" class="btn" id="cancel" hidden>Cancel</button>
+      </div>
+    </form>
+  </aside>
+</main>
+
+<script>
+/* Paste your Firebase web app config here (Firebase console > Project settings > Your apps > Web app). */
+window.FIREBASE_CONFIG = {
+  apiKey: "PASTE_API_KEY",
+  authDomain: "PASTE_PROJECT_ID.firebaseapp.com",
+  projectId: "PASTE_PROJECT_ID",
+  appId: "PASTE_APP_ID"
+};
+</script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+(function () {
+  var MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  var COUNTRIES = ["Afghanistan","Albania","Algeria","Argentina","Armenia","Australia","Austria","Azerbaijan","Bahrain","Bangladesh","Belgium","Bolivia","Bosnia and Herzegovina","Brazil","Bulgaria","Cambodia","Cameroon","Canada","Chile","China","Colombia","Costa Rica","Croatia","Cuba","Cyprus","Czechia","Denmark","Dominican Republic","Ecuador","Egypt","El Salvador","Estonia","Ethiopia","Finland","France","Georgia","Germany","Ghana","Greece","Guatemala","Honduras","Hong Kong","Hungary","Iceland","India","Indonesia","Iran","Iraq","Ireland","Israel","Italy","Jamaica","Japan","Jordan","Kazakhstan","Kenya","Kuwait","Laos","Latvia","Lebanon","Lithuania","Luxembourg","Malaysia","Maldives","Malta","Mexico","Morocco","Myanmar","Nepal","Netherlands","New Zealand","Nicaragua","Nigeria","Norway","Oman","Pakistan","Palestine","Panama","Paraguay","Peru","Philippines","Poland","Portugal","Puerto Rico","Qatar","Romania","Russia","Rwanda","Saudi Arabia","Serbia","Singapore","Slovakia","Slovenia","South Africa","South Korea","Spain","Sri Lanka","Sweden","Switzerland","Taiwan","Tanzania","Thailand","Tunisia","Turkey","Uganda","Ukraine","United Arab Emirates","United Kingdom","United States","Uruguay","Uzbekistan","Venezuela","Vietnam","Yemen","Zambia","Zimbabwe"];
+  var LS_KEY = "coffee-passport-v1";
+
+  var state = {
+    entries: [], loaded: false, slow: false, mode: "pending", persistFailed: false,
+    editingId: null, confirmId: null, composerOpen: false,
+    form: { status: "tried", rating: 0 },
+    filters: { q: "", status: "all", country: "", sort: "newest" },
+    saving: false
+  };
+  var col = null, downloads = null, loadTimer = null;
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function norm(s) { return String(s || "").trim().replace(/\s+/g, " "); }
+  function today() {
+    var d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+  function newId() { return "c" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+  /* ---------- icons ---------- */
+  function cupSvg(filled) {
+    var body = '<path d="M3 9h14v4.5a5.5 5.5 0 0 1-5.5 5.5h-3A5.5 5.5 0 0 1 3 13.5V9z"' + (filled ? ' fill="currentColor"' : ' fill="none"') + ' stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>';
+    var handle = '<path d="M17 10.5h1.2a2.8 2.8 0 0 1 0 5.6H16.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>';
+    var steam = '<path d="M7 3.5c-.8 1 .8 1.6 0 2.8M11 3.5c-.8 1 .8 1.6 0 2.8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" opacity="' + (filled ? 1 : 0.5) + '"/>';
+    return '<svg viewBox="0 0 24 24" aria-hidden="true">' + body + handle + steam + "</svg>";
+  }
+  function cupsRow(n) {
+    var s = "";
+    for (var i = 1; i <= 5; i++) s += cupSvg(i <= n);
+    return s;
+  }
+
+  /* ---------- storage ---------- */
+  function loadLocal() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      state.entries = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(state.entries)) state.entries = [];
+    } catch (e) { state.entries = []; }
+  }
+  function writeLocal() {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(state.entries)); state.persistFailed = false; }
+    catch (e) { state.persistFailed = true; }
+  }
+  function withTimeout(p) {
+    return Promise.race([p, new Promise(function (_, rej) { setTimeout(function () { rej(new Error("timeout")); }, 15000); })]);
+  }
+  function persist(id, data) {
+    if (state.mode === "db" && col) return withTimeout(col.doc(id).set(data));
+    var rec = Object.assign({ id: id }, data);
+    var i = state.entries.findIndex(function (x) { return x.id === id; });
+    if (i >= 0) state.entries[i] = rec; else state.entries.push(rec);
+    writeLocal();
+    return Promise.resolve();
+  }
+  function remove(id) {
+    if (state.mode === "db" && col) return withTimeout(col.doc(id).delete());
+    state.entries = state.entries.filter(function (x) { return x.id !== id; });
+    writeLocal();
+    return Promise.resolve();
+  }
+
+  var unsub = null;
+  function firebaseReady() {
+    var c = window.FIREBASE_CONFIG;
+    return !!(window.firebase && c && c.apiKey && String(c.apiKey).indexOf("PASTE") !== 0);
+  }
+  function browserDownloads() {
+    return {
+      save: function (r) {
+        var blob = new Blob([r.data], { type: "text/csv;charset=utf-8" });
+        var a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = r.filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+        return Promise.resolve({ status: "saved" });
+      }
+    };
+  }
+  function renderAuth(user) {
+    var box = $("auth");
+    if (!firebaseReady()) { box.innerHTML = ""; return; }
+    if (user) box.innerHTML = '<span class="who">' + esc(user.email || user.displayName || "Signed in") + '</span><button type="button" class="btn small" data-auth="out">Sign out</button>';
+    else box.innerHTML = '<button type="button" class="btn small" data-auth="in">Sign in with Google</button>';
+  }
+  function signIn() {
+    var auth = firebase.auth();
+    var provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider).catch(function (e) {
+      if (e && (e.code === "auth/popup-blocked" || e.code === "auth/operation-not-supported-in-this-environment")) {
+        auth.signInWithRedirect(provider);
+      } else if (e && e.code !== "auth/popup-closed-by-user" && e.code !== "auth/cancelled-popup-request") {
+        setMsg("Sign-in failed (" + (e.code || "unknown error") + "). Check that this site's address is in Firebase's authorized domains.", true);
+      }
+    });
+  }
+  function clearLoadTimer() { if (loadTimer) { clearTimeout(loadTimer); loadTimer = null; } }
+
+  async function init() {
+    renderAll();
+    downloads = browserDownloads();
+    if (!firebaseReady()) {
+      state.mode = "local";
+      loadLocal();
+      state.loaded = true;
+      renderAll();
+      return;
+    }
+    if (!firebase.apps.length) firebase.initializeApp(window.FIREBASE_CONFIG);
+    var auth = firebase.auth();
+    var fs = firebase.firestore();
+    auth.onAuthStateChanged(function (user) {
+      if (unsub) { unsub(); unsub = null; }
+      clearLoadTimer();
+      renderAuth(user);
+      state.slow = false; state.editingId = null; state.confirmId = null;
+      if (!user) {
+        state.mode = "signedout"; col = null; state.entries = []; state.loaded = true;
+        renderAll();
+        return;
+      }
+      state.mode = "db"; state.loaded = false; state.entries = [];
+      col = fs.collection("users").doc(user.uid).collection("cafes");
+      loadTimer = setTimeout(function () { state.slow = true; renderAll(); }, 10000);
+      unsub = col.onSnapshot(function (snap) {
+        if (snap.metadata.fromCache && snap.empty && !state.loaded) return;
+        state.entries = snap.docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); });
+        state.loaded = true; state.slow = false;
+        clearLoadTimer();
+        renderAll();
+      }, function () {
+        clearLoadTimer();
+        state.mode = "error"; state.entries = []; state.loaded = true; state.slow = false;
+        renderAll();
+      });
+    });
+    renderAll();
+  }
+
+  /* ---------- derived data ---------- */
+  function triedEntries() { return state.entries.filter(function (e) { return e.status !== "want"; }); }
+  function sortKey(e) { return e.date ? Date.parse(e.date) || 0 : e.createdAt || 0; }
+  function visibleEntries() {
+    var f = state.filters, q = f.q.toLowerCase();
+    var list = state.entries.filter(function (e) {
+      if (f.status === "tried" && e.status === "want") return false;
+      if (f.status === "want" && e.status !== "want") return false;
+      if (f.country && e.country !== f.country) return false;
+      if (q) {
+        var hay = [e.name, e.city, e.country, e.drink, e.notes].join(" ").toLowerCase();
+        if (hay.indexOf(q) < 0) return false;
+      }
+      return true;
+    });
+    list.sort(function (a, b) {
+      if (f.sort === "rating") return (b.rating || 0) - (a.rating || 0) || sortKey(b) - sortKey(a);
+      if (f.sort === "country") return String(a.country).localeCompare(String(b.country)) || String(a.name).localeCompare(String(b.name));
+      if (f.sort === "name") return String(a.name).localeCompare(String(b.name));
+      return sortKey(b) - sortKey(a) || (b.createdAt || 0) - (a.createdAt || 0);
+    });
+    return list;
+  }
+  function hashStr(s) { var h = 0; for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return Math.abs(h); }
+  function fmtDate(iso) {
+    var p = String(iso || "").split("-");
+    if (p.length !== 3) return null;
+    return { d: String(parseInt(p[2], 10)), m: MONTHS[parseInt(p[1], 10) - 1] + " " + p[0] };
+  }
+
+  /* ---------- render ---------- */
+  function renderStats() {
+    var tried = triedEntries();
+    var countries = {};
+    tried.forEach(function (e) { countries[e.country] = 1; });
+    var rated = tried.filter(function (e) { return e.rating > 0; });
+    var avg = rated.length ? (rated.reduce(function (s, e) { return s + e.rating; }, 0) / rated.length).toFixed(1) : "–";
+    var want = state.entries.length - tried.length;
+    $("stats").innerHTML =
+      '<div><dt>Cafés tried</dt><dd>' + tried.length + '</dd></div>' +
+      '<div><dt>Countries</dt><dd>' + Object.keys(countries).length + '</dd></div>' +
+      '<div><dt>Want to try</dt><dd>' + want + '</dd></div>' +
+      '<div><dt>Average rating</dt><dd>' + avg + '</dd></div>';
+  }
+
+  function renderStamps() {
+    var counts = {};
+    triedEntries().forEach(function (e) { if (e.country) counts[e.country] = (counts[e.country] || 0) + 1; });
+    var names = Object.keys(counts).sort(function (a, b) { return a.localeCompare(b); });
+    if (!names.length) {
+      $("stamps").innerHTML = '<p class="stamps-empty">Each country you log a café in gets a stamp here.</p>';
+      return;
+    }
+    $("stamps").innerHTML = names.map(function (n) {
+      var r = ((hashStr(n) % 7) - 3) * 0.9;
+      return '<span class="stamp" style="--r:' + r.toFixed(1) + 'deg">' + esc(n) + "<small>" + counts[n] + (counts[n] === 1 ? " café" : " cafés") + "</small></span>";
+    }).join("");
+  }
+
+  function renderFilters() {
+    var sel = $("country-filter");
+    var present = {};
+    state.entries.forEach(function (e) { if (e.country) present[e.country] = 1; });
+    var names = Object.keys(present).sort(function (a, b) { return a.localeCompare(b); });
+    if (state.filters.country && !present[state.filters.country]) state.filters.country = "";
+    sel.innerHTML = '<option value="">All countries</option>' + names.map(function (n) {
+      return '<option value="' + esc(n) + '">' + esc(n) + "</option>";
+    }).join("");
+    sel.value = state.filters.country;
+    var segs = document.querySelectorAll("#status-seg button");
+    for (var i = 0; i < segs.length; i++) segs[i].setAttribute("aria-pressed", String(segs[i].dataset.status === state.filters.status));
+    $("export").hidden = !(downloads && state.entries.length);
+  }
+
+  function entryHTML(e) {
+    var tried = e.status !== "want";
+    var loc = [e.city, e.country].filter(Boolean).join(", ");
+    var dt = tried ? fmtDate(e.date) : null;
+    var when = tried
+      ? (dt ? '<span class="d">' + dt.d + "</span><span>" + esc(dt.m) + "</span>" : "<span>Tried</span>")
+      : '<span class="tag">Want to try</span>';
+    var actions;
+    if (state.confirmId === e.id) {
+      actions = '<span class="ask">Delete this entry?</span>' +
+        '<button type="button" class="btn small danger" data-act="del-yes">Delete</button>' +
+        '<button type="button" class="btn small" data-act="del-no">Keep</button>';
+    } else {
+      actions = '<button type="button" class="btn small" data-act="edit">Edit</button>' +
+        (tried ? "" : '<button type="button" class="btn small" data-act="tried">Mark as tried</button>') +
+        '<button type="button" class="btn small" data-act="del">Delete</button>';
+    }
+    return '<article class="entry' + (tried ? "" : " is-want") + '" data-id="' + esc(e.id) + '">' +
+      '<div class="when">' + when + "</div>" +
+      '<div class="body"><h3>' + esc(e.name) + "</h3>" +
+      (loc ? '<p class="loc">' + esc(loc) + "</p>" : "") +
+      (e.drink ? '<p class="drink"><span class="k">Had</span>' + esc(e.drink) + "</p>" : "") +
+      (tried && e.rating ? '<div class="cups" role="img" aria-label="Rated ' + e.rating + ' out of 5">' + cupsRow(e.rating) + "</div>" : "") +
+      (e.notes ? '<p class="notes">' + esc(e.notes) + "</p>" : "") +
+      '<div class="actions">' + actions + "</div></div></article>";
+  }
+
+  function renderList() {
+    var box = $("list");
+    if (!state.loaded) {
+      box.innerHTML = '<p class="note' + (state.slow ? " slow" : "") + '">' +
+        (state.slow ? "Saved entries can't be reached yet. Anything you add will sync once the connection is back." : "Opening your passport…") + "</p>";
+      return;
+    }
+    if (state.mode === "signedout") {
+      box.innerHTML = '<div class="empty"><h2>Sign in to open your passport</h2>' +
+        "<p>Your café log is saved to your Google account, so it follows you across your phone and laptop. Only you can read it.</p>" +
+        '<button type="button" class="btn primary" data-act="signin">Sign in with Google</button></div>';
+      return;
+    }
+    if (state.mode === "error") {
+      box.innerHTML = '<p class="note slow">Couldn\'t load your log. Check that the Firestore rules are published, then reload the page.</p>';
+      return;
+    }
+    if (!state.entries.length) {
+      box.innerHTML = '<div class="empty"><h2>Your passport is empty</h2>' +
+        "<p>Start with your recent trip. Add the café, the city and what you drank, even if you only remember part of it. Cafés you hope to visit go in as Want to try.</p>" +
+        '<button type="button" class="btn primary" data-act="first">Add your first café</button></div>';
+      return;
+    }
+    var list = visibleEntries();
+    if (!list.length) { box.innerHTML = '<p class="note">No cafés match these filters.</p>'; return; }
+    box.innerHTML = list.map(entryHTML).join("");
+  }
+
+  function renderNote() {
+    var t = "";
+    if (state.mode === "db") t = "Your entries are saved to your Google account and only you can read them.";
+    else if (state.mode === "error") t = "Couldn't load your log. Check the Firestore rules, then reload.";
+    else if (state.mode === "local") t = state.persistFailed
+      ? "This browser blocked saving. Entries will be lost when you close the page."
+      : "Entries are saved in this browser only.";
+    $("storage-note").textContent = t;
+  }
+
+  function renderAll() {
+    renderStats(); renderStamps(); renderFilters(); renderList(); renderNote();
+    var dl = $("country-list");
+    if (!dl.children.length) dl.innerHTML = COUNTRIES.map(function (c) { return '<option value="' + esc(c) + '"></option>'; }).join("");
+  }
+
+  /* ---------- form ---------- */
+  function renderRating() {
+    var r = state.form.rating, html = "";
+    for (var i = 1; i <= 5; i++) {
+      html += '<button type="button" class="cup-btn" role="radio" aria-checked="' + (i === r) + '" aria-label="' + i + (i === 1 ? " cup" : " cups") + '" data-v="' + i + '">' + cupSvg(i <= r) + "</button>";
+    }
+    html += '<span class="rate-read">' + (r ? r + " of 5" : "Not rated") + "</span>";
+    $("f-rating").innerHTML = html;
+  }
+  function applyStatus() {
+    var tried = state.form.status === "tried";
+    var btns = document.querySelectorAll("#f-status button");
+    for (var i = 0; i < btns.length; i++) btns[i].setAttribute("aria-checked", String(btns[i].dataset.v === state.form.status));
+    $("g-date").hidden = !tried;
+    $("g-rating").hidden = !tried;
+  }
+  function setMsg(text, isErr) { var m = $("msg"); m.textContent = text || ""; m.className = "msg" + (isErr ? " err" : ""); }
+  function resetForm() {
+    state.editingId = null;
+    state.form = { status: "tried", rating: 0 };
+    ["f-name", "f-city", "f-country", "f-drink", "f-notes"].forEach(function (id) { $(id).value = ""; });
+    $("f-date").value = today();
+    $("form-title").textContent = "Add a café";
+    $("save").textContent = "Save café";
+    $("cancel").hidden = true;
+    applyStatus(); renderRating();
+  }
+  function openComposer() {
+    state.composerOpen = true;
+    $("composer").classList.add("open");
+  }
+  function closeComposer() {
+    state.composerOpen = false;
+    $("composer").classList.remove("open");
+  }
+  function startEdit(id, markTried) {
+    var e = state.entries.find(function (x) { return x.id === id; });
+    if (!e) return;
+    state.editingId = id;
+    state.form = { status: markTried ? "tried" : (e.status === "want" ? "want" : "tried"), rating: e.rating || 0 };
+    $("f-name").value = e.name || "";
+    $("f-city").value = e.city || "";
+    $("f-country").value = e.country || "";
+    $("f-drink").value = e.drink || "";
+    $("f-notes").value = e.notes || "";
+    $("f-date").value = markTried ? today() : (e.date || today());
+    $("form-title").textContent = markTried ? "Log this visit" : "Edit café";
+    $("save").textContent = "Save changes";
+    $("cancel").hidden = false;
+    setMsg("");
+    applyStatus(); renderRating();
+    openComposer();
+    $("composer").scrollIntoView({ block: "start" });
+    $("f-name").focus({ preventScroll: true });
+  }
+
+  async function onSubmit(ev) {
+    ev.preventDefault();
+    if (state.saving) return;
+    if (state.mode === "signedout") { setMsg("Sign in with Google to save entries.", true); return; }
+    if (state.mode === "error") { setMsg("Your log isn't loading, so nothing can be saved yet.", true); return; }
+    var name = norm($("f-name").value), country = norm($("f-country").value);
+    if (!name) { setMsg("Enter the café name.", true); $("f-name").focus(); return; }
+    if (!country) { setMsg("Enter the country so the café gets its stamp.", true); $("f-country").focus(); return; }
+    var tried = state.form.status === "tried";
+    var existing = state.editingId ? state.entries.find(function (x) { return x.id === state.editingId; }) : null;
+    var data = {
+      status: tried ? "tried" : "want",
+      name: name,
+      city: norm($("f-city").value),
+      country: country,
+      date: tried ? $("f-date").value : "",
+      drink: norm($("f-drink").value),
+      rating: tried ? state.form.rating : 0,
+      notes: $("f-notes").value.trim(),
+      createdAt: existing && existing.createdAt ? existing.createdAt : Date.now()
+    };
+    var id = state.editingId || (col ? col.doc().id : newId());
+    state.saving = true; $("save").disabled = true; setMsg("Saving…");
+    try {
+      await persist(id, data);
+      setMsg("Saved " + name + ".");
+      resetForm();
+      closeComposer();
+      renderAll();
+    } catch (e) {
+      setMsg("Couldn't save this entry. Check your connection and try again.", true);
+    } finally {
+      state.saving = false; $("save").disabled = false;
+    }
+  }
+
+  function csvCell(v) { return '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"'; }
+  async function exportCsv() {
+    if (!downloads) return;
+    var rows = [["Status", "Café", "City", "Country", "Date", "Had", "Rating", "Notes"]];
+    visibleEntries().forEach(function (e) {
+      rows.push([e.status === "want" ? "Want to try" : "Tried", e.name, e.city, e.country, e.date, e.drink, e.rating || "", e.notes]);
+    });
+    var csv = "﻿" + rows.map(function (r) { return r.map(csvCell).join(","); }).join("\r\n");
+    try {
+      await downloads.save({ filename: "coffee-passport.csv", data: csv });
+    } catch (e) {
+      if (!e || e.code !== "declined") { $("export").hidden = true; }
+    }
+  }
+
+  /* ---------- events ---------- */
+  $("form").addEventListener("submit", onSubmit);
+  $("cancel").addEventListener("click", function () { resetForm(); setMsg(""); closeComposer(); });
+  $("open-form").addEventListener("click", function () {
+    openComposer(); $("composer").scrollIntoView({ block: "start" }); $("f-name").focus({ preventScroll: true });
+  });
+  $("f-status").addEventListener("click", function (ev) {
+    var b = ev.target.closest("button[data-v]"); if (!b) return;
+    state.form.status = b.dataset.v; applyStatus();
+  });
+  $("f-rating").addEventListener("click", function (ev) {
+    var b = ev.target.closest("button[data-v]"); if (!b) return;
+    var v = parseInt(b.dataset.v, 10);
+    state.form.rating = state.form.rating === v ? 0 : v;
+    renderRating();
+  });
+  $("q").addEventListener("input", function (ev) { state.filters.q = ev.target.value.trim(); renderList(); });
+  $("status-seg").addEventListener("click", function (ev) {
+    var b = ev.target.closest("button[data-status]"); if (!b) return;
+    state.filters.status = b.dataset.status; renderFilters(); renderList();
+  });
+  $("country-filter").addEventListener("change", function (ev) { state.filters.country = ev.target.value; renderList(); });
+  $("sort").addEventListener("change", function (ev) { state.filters.sort = ev.target.value; renderList(); });
+  $("export").addEventListener("click", exportCsv);
+  $("list").addEventListener("click", async function (ev) {
+    var b = ev.target.closest("[data-act]"); if (!b) return;
+    var act = b.dataset.act;
+    if (act === "signin") { signIn(); return; }
+    if (act === "first") { openComposer(); $("composer").scrollIntoView({ block: "start" }); $("f-name").focus({ preventScroll: true }); return; }
+    var card = b.closest(".entry"); if (!card) return;
+    var id = card.dataset.id;
+    if (act === "edit") startEdit(id, false);
+    else if (act === "tried") startEdit(id, true);
+    else if (act === "del") { state.confirmId = id; renderList(); }
+    else if (act === "del-no") { state.confirmId = null; renderList(); }
+    else if (act === "del-yes") {
+      state.confirmId = null;
+      try { await remove(id); if (state.editingId === id) { resetForm(); closeComposer(); } }
+      catch (e) { setMsg("Couldn't delete that entry. Try again.", true); }
+      renderAll();
+    }
+  });
+
+  $("auth").addEventListener("click", function (ev) {
+    var b = ev.target.closest("[data-auth]"); if (!b) return;
+    if (b.dataset.auth === "in") signIn();
+    else if (firebaseReady()) firebase.auth().signOut();
+  });
+
+  resetForm();
+  init();
+})();
+</script>
+
+</body>
+</html>
